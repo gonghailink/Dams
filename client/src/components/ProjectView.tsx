@@ -101,6 +101,11 @@ export function ProjectView({
   const [promptsOpen, setPromptsOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  // Long summaries are clamped to two lines so they can't push the panels off
+  // screen; this toggles the full text.
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
+  // Phones show one panel at a time (full height) instead of stacking both.
+  const [mobilePane, setMobilePane] = useState<"memory" | "chat">("memory");
   const centerPanelRef = useRef<PanelImperativeHandle>(null);
   const rightPanelRef = useRef<PanelImperativeHandle>(null);
   const isMobile = useIsMobile();
@@ -136,6 +141,7 @@ export function ProjectView({
     fetchMemory();
     fetchDocCount();
     setExpandedPanel(null);
+    setSummaryExpanded(false);
   }, [fetchMemory, fetchDocCount]);
 
   useEffect(() => {
@@ -353,18 +359,37 @@ export function ProjectView({
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-start gap-2">
-          <div>
-            <h2 className="text-lg font-semibold leading-tight">
+    <div className="flex h-full min-h-0 flex-col gap-3 sm:gap-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-start gap-2">
+          <div className="min-w-0">
+            <h2 className="truncate text-lg font-semibold leading-tight">
               {project.title}
             </h2>
             {project.summary && (
-              <p className="text-sm text-muted-foreground">{project.summary}</p>
+              <div>
+                <p
+                  className={
+                    summaryExpanded
+                      ? "max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-sm text-muted-foreground"
+                      : "line-clamp-2 break-words text-sm text-muted-foreground"
+                  }
+                >
+                  {project.summary}
+                </p>
+                {project.summary.length > 120 && (
+                  <button
+                    type="button"
+                    className="text-xs text-primary hover:underline"
+                    onClick={() => setSummaryExpanded((v) => !v)}
+                  >
+                    {summaryExpanded ? "Show less" : "Show more"}
+                  </button>
+                )}
+              </div>
             )}
             {(tags.length > 0 || project.includeInGlobalSearch) && (
-              <div className="mt-1.5 flex flex-wrap gap-1">
+              <div className="mt-1.5 flex max-h-14 flex-wrap gap-1 overflow-y-auto">
                 {project.includeInGlobalSearch && (
                   <Badge variant="secondary" title="Included in cross-project search">
                     <Globe />
@@ -456,13 +481,29 @@ export function ProjectView({
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       {expandedPanel ? (
-        <div className="fixed inset-4 z-50 flex flex-col gap-3 rounded-2xl bg-background p-3 shadow-2xl ring-1 ring-border">
+        <div className="fixed inset-2 z-50 sm:inset-4 flex flex-col gap-3 rounded-2xl bg-background p-3 shadow-2xl ring-1 ring-border">
           {expandedPanel === "center" ? centerPanel : rightPanel}
         </div>
       ) : isMobile ? (
-        <div className="grid min-h-0 flex-1 grid-rows-[minmax(320px,1fr)_420px] gap-4">
-          {centerPanel}
-          {rightPanel}
+        <div className="flex min-h-0 flex-1 flex-col gap-3">
+          <Tabs
+            value={mobilePane}
+            onValueChange={(v) => setMobilePane(v as "memory" | "chat")}
+          >
+            <TabsList className="w-full">
+              <TabsTrigger value="memory" className="flex-1 gap-1.5">
+                <Network className="size-3.5" />
+                Memory
+              </TabsTrigger>
+              <TabsTrigger value="chat" className="flex-1 gap-1.5">
+                <MessageCircle className="size-3.5" />
+                Chat &amp; Docs
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="flex min-h-0 flex-1 flex-col">
+            {mobilePane === "memory" ? centerPanel : rightPanel}
+          </div>
         </div>
       ) : (
         // Desktop only — dragging the handle resizes both panels, and each

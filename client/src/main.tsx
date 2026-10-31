@@ -36,3 +36,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     </ThemeProvider>
   </React.StrictMode>
 );
+
+// PWA: register the service worker in production builds only, so dev-server
+// HMR is never served from a cache.
+if ((import.meta as ImportMeta & { env: { PROD: boolean } }).env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}

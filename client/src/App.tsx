@@ -13,7 +13,13 @@ import { ProjectView } from "@/components/ProjectView";
 import { ShortcutsHelp } from "@/components/ShortcutsHelp";
 import { TokensPage } from "@/components/TokensPage";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Brain, ClipboardCheck, KeyRound, LogOut, Sparkles } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { BookOpen, Brain, ClipboardCheck, KeyRound, LogOut, Menu, Sparkles } from "lucide-react";
 
 function NotFound({ message }: { message: string }) {
   return (
@@ -125,7 +131,7 @@ export default function App({
 
   return (
     <div className="flex h-dvh flex-col">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border/60 px-4">
+      <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border/60 px-3 pt-[env(safe-area-inset-top)] sm:gap-3 sm:px-4 box-content">
         <Button
           asChild
           className="glow-ring flex size-7 shrink-0 items-center justify-center rounded-lg"
@@ -140,15 +146,18 @@ export default function App({
             <Brain className="size-4 text-primary-foreground" />
           </Link>
         </Button>
-        <ProjectSwitcher
-          projects={projects}
-          selected={selected}
-          onSelect={selectProject}
-          onCreate={() => navigate("/new")}
-          open={switcherOpen}
-          onOpenChange={setSwitcherOpen}
-        />
+        <div className="hidden md:block">
+          <ProjectSwitcher
+            projects={projects}
+            selected={selected}
+            onSelect={selectProject}
+            onCreate={() => navigate("/new")}
+            open={switcherOpen}
+            onOpenChange={setSwitcherOpen}
+          />
+        </div>
         <AppBreadcrumbs crumbs={crumbs} className="min-w-0 flex-1" />
+        <div className="hidden items-center gap-2 md:flex">
         <Button
           asChild
           variant={pathname === "/guide" ? "secondary" : "ghost"}
@@ -205,9 +214,54 @@ export default function App({
         <Button variant="ghost" size="icon" title="Log out" aria-label="Log out" onClick={onLogout}>
           <LogOut className="size-4" />
         </Button>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="md:hidden" aria-label="Menu">
+              <Menu className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onSelect={() => navigate("/")}>
+              <Brain className="size-4" />
+              Projects
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => navigate("/guide")}>
+              <BookOpen className="size-4" />
+              Guide
+            </DropdownMenuItem>
+            {identity.scope !== "read_only" && (
+              <DropdownMenuItem onSelect={() => navigate("/assistant")}>
+                <Sparkles className="size-4" />
+                Assistant
+              </DropdownMenuItem>
+            )}
+            {isAdmin && (
+              <DropdownMenuItem
+                onSelect={() => {
+                  refreshPendingPlans();
+                  navigate("/plans");
+                }}
+              >
+                <ClipboardCheck className="size-4" />
+                Plans{pendingPlans > 0 ? ` (${pendingPlans})` : ""}
+              </DropdownMenuItem>
+            )}
+            {isAdmin && (
+              <DropdownMenuItem onSelect={() => navigate("/tokens")}>
+                <KeyRound className="size-4" />
+                Tokens
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onSelect={onLogout}>
+              <LogOut className="size-4" />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <ModeToggle />
       </header>
-      <main className="min-h-0 flex-1 overflow-hidden p-4">
+      <main className="min-h-0 flex-1 overflow-hidden p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4">
         <Routes>
           <Route
             index

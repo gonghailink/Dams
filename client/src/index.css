@@ -210,3 +210,17 @@
       0 0 18px 1px color-mix(in oklch, var(--glow-color, var(--accent-blue)) calc(var(--glow-strength) * 80%), transparent);
   }
 }
+
+/* Mobile: 16px inputs stop iOS Safari zooming the page on focus; the app is
+   fixed-height, so also stop rubber-band overscroll from moving it. */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+html,
+body {
+  overscroll-behavior-y: none;
+}

@@ -118,7 +118,7 @@ export const approvePlanSchema = z.object({
 
 export type PlanSource = "api" | "mcp" | "agent";
 export type PlanStatus = "pending" | "running" | "done" | "failed" | "rejected";
-export type ActionStatus = "pending" | "done" | "failed";
+export type ActionStatus = "pending" | "running" | "done" | "failed";
 
 export interface StoredAction {
   id: string;

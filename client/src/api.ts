@@ -97,7 +97,7 @@ export interface StoredPlanAction {
   seq: number;
   type: PlanAction["type"];
   payload: PlanAction;
-  status: "pending" | "done" | "failed";
+  status: "pending" | "running" | "done" | "failed";
   result: unknown;
   inverse: unknown;
   error: string | null;

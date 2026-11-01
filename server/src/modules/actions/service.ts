@@ -14,6 +14,11 @@ import {
 } from "./schema";
 import { validatePlan } from "./validate";
 
+/** How long a `running` action (or a running plan with no activity) is
+ *  presumed to belong to a live executor. Comfortably above the Workflow
+ *  step timeout (30s), so a live step is never mistaken for a dead one. */
+const STALE_CLAIM_SECONDS = 60;
+
 export class PlanValidationError extends Error {
   constructor(readonly problems: string[]) {
     super(`Plan is invalid: ${problems.join("; ")}`);
@@ -231,12 +236,19 @@ export class ActionsService {
     if (plan.status !== "failed" && plan.status !== "running") {
       throw new PlanStateError(`Plan is ${plan.status}; only a failed or running plan can be resumed`);
     }
+    // A running plan with recent activity has a live executor; resuming it
+    // would only race that executor. Only a quiet one is genuinely stuck.
+    if (plan.status === "running" && (await this.hasRecentActivity(id))) {
+      throw new PlanStateError("Plan is still running; resume it only if it has been idle for a minute or more");
+    }
     await this.env.DAMS_DB.batch([
       this.env.DAMS_DB
         .prepare("UPDATE action_plans SET status = 'running', error = NULL, finished_at = NULL WHERE id = ?")
         .bind(id),
+      // Bumping updated_at makes a second Resume click right after this one hit
+      // the activity guard above instead of starting another executor.
       this.env.DAMS_DB
-        .prepare("UPDATE plan_actions SET status = 'pending', error = NULL WHERE plan_id = ? AND status = 'failed'")
+        .prepare("UPDATE plan_actions SET status = 'pending', error = NULL, updated_at = datetime('now') WHERE plan_id = ? AND status = 'failed'")
         .bind(id),
     ]);
     await this.audit(auth.name, "resumed", id, null);
@@ -283,6 +295,28 @@ export class ActionsService {
       .first<{ status: PlanStatus }>();
     if (planStatus?.status !== "running") throw new PlanStateError("Plan is not running");
 
+    // Claim the action before executing it, so two executors on the same plan
+    // (a Resume during a live run, a duplicate dispatch) can't both run it. A
+    // `running` claim older than STALE_CLAIM_SECONDS is a dead executor's and
+    // may be taken over; `failed` is claimable so Workflow step retries work.
+    const claim = await this.env.DAMS_DB.prepare(
+      `UPDATE plan_actions SET status = 'running', error = NULL, updated_at = datetime('now')
+       WHERE id = ? AND plan_id = ?
+         AND (status IN ('pending', 'failed')
+              OR (status = 'running' AND updated_at <= datetime('now', ?)))`,
+    )
+      .bind(actionId, planId, `-${STALE_CLAIM_SECONDS} seconds`)
+      .run();
+    if (claim.meta.changes === 0) {
+      const current = await this.env.DAMS_DB.prepare("SELECT status, result FROM plan_actions WHERE id = ? AND plan_id = ?")
+        .bind(actionId, planId)
+        .first<{ status: ActionStatus; result: string | null }>();
+      if (current?.status === "done") return (parseJson(current.result) as Record<string, unknown> | null) ?? {};
+      // Another executor holds it and will finish it (and the plan). Skip
+      // rather than throw: throwing would fail the whole plan under it.
+      return {};
+    }
+
     const action: Action = actionSchema.parse(JSON.parse(row.payload));
     try {
       const outcome = await executeAction(this.env, actionId, action);
@@ -303,13 +337,30 @@ export class ActionsService {
     }
   }
 
+  /** Only completes a plan whose actions are all `done`: an executor that
+   *  skipped actions another executor still holds must not finish the plan
+   *  under it. */
   async finishPlan(planId: string): Promise<void> {
-    await this.env.DAMS_DB.prepare(
-      "UPDATE action_plans SET status = 'done', finished_at = datetime('now') WHERE id = ? AND status = 'running'",
+    const changed = await this.env.DAMS_DB.prepare(
+      `UPDATE action_plans SET status = 'done', finished_at = datetime('now')
+       WHERE id = ? AND status = 'running'
+         AND NOT EXISTS (SELECT 1 FROM plan_actions WHERE plan_id = ? AND status != 'done')`,
     )
-      .bind(planId)
+      .bind(planId, planId)
       .run();
-    await this.audit("system", "plan_done", planId, null);
+    if (changed.meta.changes > 0) await this.audit("system", "plan_done", planId, null);
+  }
+
+  private async hasRecentActivity(planId: string): Promise<boolean> {
+    const row = await this.env.DAMS_DB.prepare(
+      `SELECT 1 AS live FROM action_plans p
+       WHERE p.id = ?
+         AND (p.approved_at > datetime('now', ?)
+              OR EXISTS (SELECT 1 FROM plan_actions a WHERE a.plan_id = p.id AND a.updated_at > datetime('now', ?)))`,
+    )
+      .bind(planId, `-${STALE_CLAIM_SECONDS} seconds`, `-${STALE_CLAIM_SECONDS} seconds`)
+      .first();
+    return row !== null;
   }
 
   /** A failed action stops the plan; actions that already ran stay done and

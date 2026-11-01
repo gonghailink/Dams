@@ -371,6 +371,12 @@ reconstructs a real one from the template at CI build time; see
 - `create_project` needs the slug typed as a per-action confirmation
   (`approvePlanSchema.confirmations`, enforced in `approve`, mirrored in
   `PlansPage`). Don't fold it into a blanket approval.
+- **Executors claim before they run.** `runAction` atomically moves an action
+  `pending|failed → running` (or takes over a `running` claim older than
+  `STALE_CLAIM_SECONDS`) and skips it if the claim fails; `finishPlan` only
+  completes a plan whose actions are all `done`; `resume` refuses a `running`
+  plan with recent activity. Don't weaken these — they are what stops a
+  Resume during a live run from double-applying actions (issue #1).
 - Actions are append-only/idempotent: derived entry ids (`actionId`,
   `actionId:entryId`, `actionId:moved`) + `appendOnce`. Never rewrite
   `memory.jsonl`; archive is `projects.archived`, not a delete.

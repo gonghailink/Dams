@@ -10,13 +10,14 @@ import {
 } from "d3-force";
 import { select, type Selection } from "d3-selection";
 import { type D3ZoomEvent, zoom, type ZoomBehavior, zoomIdentity } from "d3-zoom";
-import { LayoutGrid, List, Maximize2, Minus, Network, Plus } from "lucide-react";
+import { Info, LayoutGrid, List, Maximize2, Minus, Network, Plus, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { MemoryEntry } from "@/api";
 import { CategoryBadge } from "@/components/CategoryBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Sheet,
   SheetContent,
@@ -188,6 +189,13 @@ export function MemoryGraph({
   const [search, setSearch] = useState("");
   const [mode, setMode] = useState<ViewMode>("network");
   const [zoomPct, setZoomPct] = useState(100);
+  // Legend and toolbar are toggleable; on phones the legend starts hidden so
+  // it doesn't cover the graph. null = user hasn't chosen, follow the default.
+  const isMobile = useIsMobile();
+  const [legendPref, setLegendPref] = useState<boolean | null>(null);
+  const [toolsPref, setToolsPref] = useState<boolean | null>(null);
+  const legendOpen = legendPref ?? !isMobile;
+  const toolsOpen = toolsPref ?? true;
 
   const searchMatch = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -473,7 +481,19 @@ export function MemoryGraph({
           </div>
         )}
 
-        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-xl border border-border bg-popover/95 p-1.5 shadow-sm backdrop-blur">
+        {!toolsOpen && (
+          <Button
+            variant="outline"
+            size="icon-sm"
+            title="Show tools"
+            className="absolute bottom-3 left-3 bg-popover/95 backdrop-blur"
+            onClick={() => setToolsPref(true)}
+          >
+            <SlidersHorizontal className="size-4" />
+          </Button>
+        )}
+        {toolsOpen && (
+        <div className="absolute bottom-3 left-3 flex max-w-[calc(100%-1.5rem)] items-center gap-1 rounded-xl border border-border bg-popover/95 p-1 shadow-sm backdrop-blur sm:gap-1.5 sm:p-1.5">
           {viewModes.map(({ key, icon: Icon, title }) => (
             <Button
               key={key}
@@ -502,11 +522,32 @@ export function MemoryGraph({
               </Button>
             </>
           )}
+          <span className="mx-0.5 h-5 w-px bg-border" />
+          <Button variant="ghost" size="icon-sm" title="Hide tools" onClick={() => setToolsPref(false)}>
+            <X className="size-4" />
+          </Button>
         </div>
+        )}
 
-        {mode === "network" && (
-          <div className="absolute bottom-3 right-3 rounded-xl border border-border bg-popover/95 p-2.5 text-xs shadow-sm backdrop-blur">
-            <p className="mb-1.5 font-medium text-muted-foreground">Category</p>
+        {mode === "network" && !legendOpen && (
+          <Button
+            variant="outline"
+            size="icon-sm"
+            title="Show legend"
+            className="absolute right-3 top-3 bg-popover/95 backdrop-blur"
+            onClick={() => setLegendPref(true)}
+          >
+            <Info className="size-4" />
+          </Button>
+        )}
+        {mode === "network" && legendOpen && (
+          <div className="absolute right-3 top-3 max-h-[calc(100%-1.5rem)] overflow-y-auto rounded-xl border border-border bg-popover/95 p-2.5 text-xs shadow-sm backdrop-blur">
+            <div className="mb-1.5 flex items-center justify-between gap-3">
+              <p className="font-medium text-muted-foreground">Category</p>
+              <button type="button" title="Hide legend" className="text-muted-foreground hover:text-foreground" onClick={() => setLegendPref(false)}>
+                <X className="size-3.5" />
+              </button>
+            </div>
             <div className="flex flex-col gap-1">
               {legend.map((category) => {
                 const Icon = CATEGORY_ICONS[category];

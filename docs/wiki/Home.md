@@ -1,5 +1,7 @@
 # DAMS — Distributed AI Memory System
 
+![DAMS — Your knowledge, in a connected graph](https://media.mahmoudbebars.dev/projects/dams-github-social-preview.png)
+
 A personal, cross-provider memory server. One Cloudflare Worker that lets any
 MCP-capable AI client (Claude, ChatGPT, Gemini CLI, Claude Code) read and write
 structured memory for your projects, plus a web UI, hybrid semantic search
@@ -29,6 +31,8 @@ Workflows, and the Anthropic API for chat.
 | Contribute | [[Contributing]] |
 
 ## Features at a glance
+
+![The DAMS web UI: project list, memory graph and per-project chat](https://media.mahmoudbebars.dev/projects/damsPreview.png)
 
 - **Structured project memory:** entities, relations and observations,
   append-only, readable and writable over MCP or REST.

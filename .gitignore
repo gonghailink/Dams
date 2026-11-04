@@ -16,3 +16,6 @@ client/dist/
 .claude
 # generated brag videos
 videos/
+
+# Landing page lives in its own repo (mahmoud-bebars/dams-landing)
+dams-landing/

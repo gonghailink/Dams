@@ -261,3 +261,7 @@ Built: memory + MCP + token auth + sharing, hybrid search, approved actions,
 the global assistant with tasks. Still ahead: the local sync CLI, an undo
 executor, docs in search, per-action approval, automated tests — see the
 [roadmap](docs/PROJECT_UNDERSTANDING.md#roadmap--open-tasks).
+
+## License
+
+[MIT](LICENSE) © 2026 Mahmoud Bebars

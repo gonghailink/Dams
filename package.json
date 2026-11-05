@@ -1,6 +1,7 @@
 {
   "name": "distributed-ai-memory-system",
   "version": "0.2.1",
+  "license": "MIT",
   "private": true,
   "workspaces": [
     "client",

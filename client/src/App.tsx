@@ -19,7 +19,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { BookOpen, Brain, ClipboardCheck, KeyRound, LogOut, Menu, Sparkles } from "lucide-react";
+import { CLOUD_WISHLIST_URL, REPO_URL } from "@/lib/links";
+import { BookOpen, Brain, Cloud, ClipboardCheck, KeyRound, LogOut, Menu, Sparkles, Star } from "lucide-react";
 
 function NotFound({ message }: { message: string }) {
   return (
@@ -158,6 +159,18 @@ export default function App({
         </div>
         <AppBreadcrumbs crumbs={crumbs} className="min-w-0 flex-1" />
         <div className="hidden items-center gap-2 md:flex">
+        <Button asChild variant="ghost" size="sm" className="gap-1.5" title="Star DAMS on GitHub">
+          <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
+            <Star className="size-4" />
+            Star
+          </a>
+        </Button>
+        <Button asChild variant="ghost" size="sm" className="gap-1.5" title="Join the DAMS Cloud wishlist">
+          <a href={CLOUD_WISHLIST_URL} target="_blank" rel="noopener noreferrer">
+            <Cloud className="size-4" />
+            Cloud
+          </a>
+        </Button>
         <Button
           asChild
           variant={pathname === "/guide" ? "secondary" : "ghost"}
@@ -253,6 +266,18 @@ export default function App({
                 Tokens
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem asChild>
+              <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
+                <Star className="size-4" />
+                Star on GitHub
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a href={CLOUD_WISHLIST_URL} target="_blank" rel="noopener noreferrer">
+                <Cloud className="size-4" />
+                Cloud wishlist
+              </a>
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={onLogout}>
               <LogOut className="size-4" />
               Log out
